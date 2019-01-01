@@ -27,7 +27,7 @@ func Send(destination string, timeout time.Duration, frameSize uint) error {
 			offset := 0
 			for n := 0; offset < int(frameSize); offset += n {
 				var err error
-				n, err = r.Read(buf)
+				n, err = r.Read(buf[offset:])
 				if err == io.EOF {
 					eof = true
 					break
@@ -39,7 +39,7 @@ func Send(destination string, timeout time.Duration, frameSize uint) error {
 			}
 
 			if !eof && offset != int(frameSize) {
-				log.Printf("non-full frame: %d", offset)
+				panic(fmt.Errorf("non-full frame: %d", offset))
 			}
 
 			// send the frame to the channel
