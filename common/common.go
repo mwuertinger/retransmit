@@ -39,15 +39,25 @@ func MarshalFrame(w io.Writer, frame *Frame) error {
 		panic("copy failed")
 	}
 
-	_, err := w.Write(buf)
+	n, err := w.Write(buf)
+	if err != nil {
+		return err
+	}
+	if n != len(buf) {
+		return fmt.Errorf("not entire buffer was sent")
+	}
+
 	return err
 }
 
 func UnmarshalFrame(r io.Reader) (*Frame, error) {
+	var err error
 	var buf [headerLength]byte
-	_, err := r.Read(buf[:])
-	if err != nil {
-		return nil, fmt.Errorf("read: %v", err)
+	for n, offset := 0, 0; uint64(offset) < headerLength; offset += n {
+		n, err = r.Read(buf[offset:])
+		if err != nil {
+			return nil, fmt.Errorf("read: %v", err)
+		}
 	}
 
 	var frame Frame
@@ -55,7 +65,7 @@ func UnmarshalFrame(r io.Reader) (*Frame, error) {
 	frame.Length = binary.BigEndian.Uint64(buf[8:16])
 	frame.Sequence = binary.BigEndian.Uint64(buf[16:24])
 	if copied := copy(frame.Checksum[:], buf[24:56]); copied != 32 {
-		panic("expected 16 bytes to copy")
+		panic("expected 32 bytes to copy")
 	}
 
 	if frame.Magic != magic {
@@ -63,9 +73,12 @@ func UnmarshalFrame(r io.Reader) (*Frame, error) {
 	}
 
 	frame.Data = make([]byte, frame.Length)
-	_, err = r.Read(frame.Data)
-	if err != nil {
-		return nil, fmt.Errorf("read data: %v", err)
+	for n, offset := 0, 0; uint64(offset) < frame.Length; offset += n {
+		n, err = r.Read(frame.Data[offset:])
+		if err != nil {
+			return nil, fmt.Errorf("read data: %v", err)
+		}
+		//log.Printf("read %d bytes", n)
 	}
 
 	frameBuf := make([]byte, headerLength+frame.Length)
