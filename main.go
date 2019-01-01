@@ -10,8 +10,12 @@ import (
 	"github.com/mwuertinger/retransmit/send"
 )
 
+// buildVersion is injected during build
+var buildVersion string
+
 func main() {
 	app := kingpin.New("retransmit", "")
+	app.Version(buildVersion)
 	timeout := app.Flag("timeout", "timeout of send and receive operations in Go notation (eg. 10s)").Short('t').Default("10s").Duration()
 	cmdSend := app.Command("send", "run in sending mode")
 	frameSize := cmdSend.Flag("frame-size", "size of a frame in MiB").Short('F').Default("1").Uint()
