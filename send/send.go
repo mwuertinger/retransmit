@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/dustin/go-humanize"
+
 	"github.com/mwuertinger/retransmit/common"
 )
 
@@ -64,6 +66,7 @@ func Send(destination string, timeout time.Duration, frameSize uint) error {
 	}()
 
 	var curFrame *common.Frame
+	var transmittedBytes uint64
 
 	// Try to connect forever
 	for {
@@ -75,7 +78,7 @@ func Send(destination string, timeout time.Duration, frameSize uint) error {
 			continue
 		}
 
-		err = handleConn(conn, timeout, frameChan, &curFrame)
+		err = handleConn(conn, timeout, frameChan, &curFrame, &transmittedBytes)
 		if err == io.EOF {
 			return nil
 		}
@@ -88,7 +91,7 @@ func Send(destination string, timeout time.Duration, frameSize uint) error {
 	return nil
 }
 
-func handleConn(conn net.Conn, timeout time.Duration, frameChan <-chan *common.Frame, curFrame **common.Frame) error {
+func handleConn(conn net.Conn, timeout time.Duration, frameChan <-chan *common.Frame, curFrame **common.Frame, transmittedBytes *uint64) error {
 	defer conn.Close()
 	log.Print("Connection opened")
 
@@ -105,13 +108,15 @@ func handleConn(conn net.Conn, timeout time.Duration, frameChan <-chan *common.F
 		if err := common.MarshalFrame(conn, *curFrame); err != nil {
 			return err
 		}
-		log.Printf("Sent frame %d (%d bytes)", (*curFrame).Sequence, (*curFrame).Length)
+		log.Printf("Sent frame %d (%s)", (*curFrame).Sequence, humanize.IBytes((*curFrame).Length))
 
 		ack, err := common.UnmarshalFrame(conn)
 		if err != nil {
 			return err
 		}
-		log.Print("Received ack ", ack.Sequence)
+
+		*transmittedBytes += (*curFrame).Length
+		log.Printf("Received ack %d (%s total)", ack.Sequence, humanize.IBytes(*transmittedBytes))
 
 		if ack.Sequence != (*curFrame).Sequence {
 			return fmt.Errorf("unexpected sequence number: expected=%v, got=%v", (*curFrame).Sequence, ack.Sequence)
