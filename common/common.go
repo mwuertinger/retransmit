@@ -26,7 +26,7 @@ func MarshalFrame(w io.Writer, frame *Frame) error {
 	frame.Length = uint64(len(frame.Data))
 
 	buf := make([]byte, headerLength+frame.Length)
-	binary.BigEndian.PutUint64(buf[0:8], magic)
+	binary.BigEndian.PutUint64(buf[0:8], frame.Magic)
 	binary.BigEndian.PutUint64(buf[8:16], frame.Length)
 	binary.BigEndian.PutUint64(buf[16:24], frame.Sequence)
 	// skip checksum

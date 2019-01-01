@@ -89,7 +89,7 @@ func handleFrame(conn net.Conn, frameChan chan<- *common.Frame, timeout time.Dur
 		return fmt.Errorf("UnmarshalFrame: %v", err)
 	}
 
-	log.Print("Got frame ", frame.Sequence)
+	log.Printf("Got frame %d (%d bytes)", frame.Sequence, frame.Length)
 
 	sequence.mu.Lock()
 	defer sequence.mu.Unlock()

@@ -12,36 +12,54 @@ import (
 )
 
 func Send(destination string, timeout time.Duration, frameSize uint) error {
-	frameChan := make(chan *common.Frame)
+	frameChan := make(chan *common.Frame, 16)
 
 	// Go routine reads from stdin and sends frames of data to channel.
 	go func() {
 		var seq uint64
+		eof := false
+
+		// r := bufio.NewReaderSize(os.Stdin, 2*int(frameSize))
+		r := os.Stdin
 
 		for {
 			buf := make([]byte, frameSize)
-			n, err := os.Stdin.Read(buf)
-			if err == io.EOF {
-				// End of transmission indicated by length 0 frame
-				frameChan <- &common.Frame{
-					Sequence: seq,
-					Length:   0,
+			offset := 0
+			for n := 0; offset < int(frameSize); offset += n {
+				var err error
+				n, err = r.Read(buf)
+				if err == io.EOF {
+					eof = true
+					break
 				}
-				close(frameChan)
-				return
+				if err != nil {
+					// if an error occurs reading from stdin all we can do is give up
+					log.Fatal(err)
+				}
 			}
-			// if an error occurs reading from stdin all we can do is give up
-			if err != nil {
-				log.Fatal(err)
+
+			if !eof && offset != int(frameSize) {
+				log.Printf("non-full frame: %d", offset)
 			}
 
 			// send the frame to the channel
 			frameChan <- &common.Frame{
 				Sequence: seq,
-				Data:     buf[0:n],
+				Data:     buf[0:offset],
 			}
 
 			seq++
+
+			if eof {
+				// if we hit EOF and the last frame was not empty we have to send a final empty frame
+				if offset > 0 {
+					frameChan <- &common.Frame{
+						Sequence: seq,
+					}
+				}
+
+				return
+			}
 		}
 	}()
 
@@ -87,7 +105,7 @@ func handleConn(conn net.Conn, timeout time.Duration, frameChan <-chan *common.F
 		if err := common.MarshalFrame(conn, *curFrame); err != nil {
 			return err
 		}
-		log.Print("Sent frame ", (*curFrame).Sequence)
+		log.Printf("Sent frame %d (%d bytes)", (*curFrame).Sequence, (*curFrame).Length)
 
 		ack, err := common.UnmarshalFrame(conn)
 		if err != nil {
