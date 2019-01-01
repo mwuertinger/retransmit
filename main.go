@@ -26,10 +26,14 @@ func main() {
 
 	switch cmd {
 	case "send":
-		send.Send(*destination, *timeout, *frameSize*1024*1024)
+		err = send.Send(*destination, *timeout, *frameSize*1024*1024)
 	case "recv":
-		recv.Recv(*listen, *timeout)
+		err = recv.Recv(*listen, *timeout)
 	default:
 		panic("undefined command: " + cmd)
+	}
+
+	if err != nil {
+		log.Fatal(err)
 	}
 }
