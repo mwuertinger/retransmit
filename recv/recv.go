@@ -97,14 +97,15 @@ func handleFrame(conn net.Conn, frameChan chan<- *common.Frame, timeout time.Dur
 	if sequence.num < frame.Sequence {
 		return fmt.Errorf("gap in sequence numbers: expected=%d, got=%d", sequence.num, frame.Sequence)
 	}
-	if sequence.num > frame.Sequence {
-		log.Printf("Discarding duplicate frame %d, expected %d", frame.Sequence, sequence.num)
-		return nil
-	}
 
 	err = common.MarshalFrame(conn, &common.Frame{Sequence: frame.Sequence})
 	if err != nil {
 		return fmt.Errorf("sending ack failed: %v", err)
+	}
+
+	if sequence.num > frame.Sequence {
+		log.Printf("Discarding duplicate frame %d, expected %d", frame.Sequence, sequence.num)
+		return nil
 	}
 
 	sequence.num++
