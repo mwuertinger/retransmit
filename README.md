@@ -5,6 +5,13 @@ infinite loop until all of the data has been transmitted. Should the connection
 drop or hang the connection is re-established and the data is sent again.
 Sequence numbers and checksums ensure that data is transferred reliably.
 
+## Setup
+You need to have [Go installed](https://golang.org/doc/install) in order to
+build this application. Then you can simply run go get:
+```
+go get github.com/mwuertinger/retransmit
+```
+
 ## Usage
 The tool can operate in a send and a receive mode and has to run on both source
 and destination hosts:
