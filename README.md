@@ -6,15 +6,13 @@ drop or hang the connection is re-established and the data is sent again.
 Sequence numbers and checksums ensure that data is transferred reliably.
 
 ## Usage
-The tool can operate in a send and a receive mode.
-
-### Sender
+The tool can operate in a send and a receive mode and has to run on both source
+and destination hosts:
 ```
-$ some-program | retransmit send destination:1234 
+source$ some-program | retransmit send destination:1234 
 ```
-### Receiver
 ```
-$ retransmit recv 0.0.0.0:1234 | some-other-program
+destination$ retransmit recv 0.0.0.0:1234 | some-other-program
 ```
 
 ## Example
@@ -30,12 +28,12 @@ with the SSH connection will require a complete restart of the process.
 
 This problem can solved by using `retransmit` on both sides:
 ```
-sender$ btrfs send /path/to/snapshot | retransmit send destination:10000
+source$ btrfs send /path/to/snapshot | retransmit send destination:10000
 ```
 On the destination end start `retransmit` in receiving mode and pipe the data
 into the target process:
 ```
-destination$ retransmit recv destination:10000 | btrfs receive /path/to/filesystem
+destination$ retransmit recv 0.0.0.0:10000 | btrfs receive /path/to/filesystem
 ```
 
 ## Security
